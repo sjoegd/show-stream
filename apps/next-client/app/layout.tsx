@@ -16,8 +16,8 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: 'Show Stream client',
-	description: 'The streaming client for Show Stream',
+	title: 'ShowStream client',
+	description: 'The streaming client for ShowStream',
 };
 
 export default function RootLayout({

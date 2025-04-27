@@ -1,3 +1,10 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - apps/*
+  - packages/*
+
+overrides:
+  next@>=15.0.0 <15.2.3: '>=15.2.3'
+  '@babel/runtime-corejs3@<7.26.10': '>=7.26.10'
+
+ignoredBuiltDependencies:
+  - core-js-pure
