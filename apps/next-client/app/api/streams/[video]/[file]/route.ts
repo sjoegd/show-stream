@@ -3,18 +3,27 @@
  * Forwards to (API server)/streams/:video/:file
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ video: string, file: string }> }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ video: string; file: string }> }) {
 	const { video, file } = await params;
 
-  // TODO:
-  // - Sanitize
-  // - Validate
-  // - Authenticate
+	// TODO:
+	// - Sanitize
+	// - Validate
+	// - Authenticate
 
-  const url = `http://localhost:5000/streams/${video}/${file}`; // TODO: Env variable
-  const response = await fetch(url)
+	const url = `${process.env.API_SERVER_URL}/streams/${video}/${file}`;
 
-  return response;
+	const response = await fetch(url);
+	if (response.ok) {
+		return response;
+	}
+
+	return NextResponse.json(
+		{
+			error: 'Failed to fetch video file',
+		},
+		{ status: 500 },
+	);
 }

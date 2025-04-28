@@ -1,5 +1,6 @@
 import winston from 'winston';
 import morgan from 'morgan';
+import path from 'path';
 
 export const createLogger = () => {
 	const logger = winston.createLogger({
@@ -13,8 +14,8 @@ export const createLogger = () => {
 		},
 		format: winston.format.json(),
 		transports: [
-			new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-			new winston.transports.File({ filename: 'logs/combined.log', level: 'http' }),
+			new winston.transports.File({ filename: path.resolve(__dirname, '../logs/error.log'), level: 'error' }),
+			new winston.transports.File({ filename: path.resolve(__dirname, '../logs/combined.log'), level: 'http' }),
 			new winston.transports.Console({ format: winston.format.simple(), level: 'debug' }),
 		],
 	});

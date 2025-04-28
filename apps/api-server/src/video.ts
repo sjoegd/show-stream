@@ -40,13 +40,18 @@ export const transcodeVideo = async (params: TranscodeVideoParams) => {
 	const segmentPath = path.resolve(cacheFolder, 'segment%03d.ts');
 	const cachePath = path.resolve(cacheFolder, 'playlist.m3u8');
 
-	if (!fs.existsSync(cacheFolder)) {
-		fs.mkdirSync(cacheFolder, { recursive: true });
+	if (!fs.existsSync(videoPath)) {
+		res.status(404).send({ error: 'Video not found' });
+		return;
 	}
 
 	if (transcodings[videoBase]) {
 		res.status(200).json({ playlistUrl: `/streams/${videoBase}/playlist.m3u8` });
 		return;
+	}
+
+	if (!fs.existsSync(cacheFolder)) {
+		fs.mkdirSync(cacheFolder, { recursive: true });
 	}
 
 	transcodings[videoBase] = {

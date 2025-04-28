@@ -11,9 +11,14 @@ export default function VideoPlayer({ video }: { video: string }) {
 		if (!videoElement) return;
 
 		(async () => {
-			const response = await fetch(`/api/transcode/${video}`); // TODO: Constant
-			let { playlistUrl } = (await response.json()) as { playlistUrl: string };
-			playlistUrl = `/api${playlistUrl}`; // TODO: Constant
+			const response = await fetch(`/api/transcode/${video}`);
+			let { playlistUrl } = await response.json() as { playlistUrl: string };
+
+			if (!playlistUrl) {
+				return;
+			}
+			
+			playlistUrl = `/api${playlistUrl}`;
 
 			if (Hls.isSupported()) {
 				hls = new Hls({

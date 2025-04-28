@@ -3,7 +3,7 @@
  * Forwards to (API server)/transcode/:video
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ video: string }> }) {
 	const { video } = await params;
@@ -13,7 +13,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ vid
 	// - Validate
 	// - Authenticate
 
-	const url = `http://localhost:5000/transcode/${video}`; // TODO: Env variable
+	const url = `${process.env.API_SERVER_URL}/transcode/${video}`;
+
 	const response = await fetch(url);
-	return response;
+	if (response.ok) {
+		return response;
+	}
+
+	return NextResponse.json(
+		{
+			error: 'Failed to transcode video',
+		},
+		{ status: 500 },
+	);
 }
