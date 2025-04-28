@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename); // get the name of the directory
 const nextConfig = {
 	transpilePackages: ['@workspace/ui'],
 	output: 'standalone',
-  outputFileTracingRoot: path.join(__dirname, '../../'),
+	outputFileTracingRoot: path.join(__dirname, '../../'),
 };
 
-export default nextConfig
+export default nextConfig;
