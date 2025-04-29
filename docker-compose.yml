@@ -7,6 +7,10 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    volumes:
+      - type: bind
+        source: ./media
+        target: /app/apps/api-server/media
     networks:
       - show_stream_network
   next-client:
@@ -17,6 +21,21 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    networks:
+      - show_stream_network
+  mongodb:
+    container_name: mongodb
+    image: mongodb/mongodb-community-server:7.0-ubi8
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: root
+      MONGODB_INITDB_ROOT_PASSWORD: root
+    volumes: 
+      - type: bind
+        source: ./data
+        target: /data/db
     networks:
       - show_stream_network
 

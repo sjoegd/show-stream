@@ -7,42 +7,21 @@ import { type Response, type Request } from 'express';
 import { type Logger } from 'winston';
 import { findMediaPath, findMediaVideoPath } from './media';
 
+/**
+ * Video API
+ * - Requests for video transcoding
+ * - Requests for video streaming
+ */
+
+/**
+ * /transcode/:id
+ * - request to transcode video
+ * -> playlist url for streaming
+ */
 const transcodings: Record<number, { cacheFolder: string; streamPath: string }> = {};
 
-/*
- * /transcode/:id
- * Request a transcoding of media (id)
- * If transcoding is already in progress | done, returns the stream path for the playlist
- * If not, start a new transcoding process and returns the stream path for the playlist that is being updated
- */
-const acceptedVideos = ['.mp4']; // Update later
 export const transcodeVideo = async (params: { id: number; logger: Logger; req: Request; res: Response }) => {
 	const { id, logger, res } = params;
-
-	const mediaPath = await findMediaPath(id);
-
-	if (!mediaPath) {
-		res.status(404).send({ error: 'Video not found' });
-		return;
-	}
-
-	const mediaResolvedPath = path.resolve(__dirname, '../media', mediaPath);
-	const videoPath = await findMediaVideoPath(mediaResolvedPath);
-
-	if (!videoPath) {
-		res.status(404).send({ error: 'Video not found' });
-		return;
-	}
-
-	if (!acceptedVideos.includes(path.extname(videoPath))) {
-		logger.log('info', `Invalid video request: ${path.basename(videoPath)}`);
-		res.status(400).send('Invalid video');
-		return;
-	}
-
-	const cacheFolder = path.resolve(__dirname, `../media/cache/${id}`);
-	const playlistPath = path.resolve(cacheFolder, 'playlist.m3u8');
-	const segmentPath = path.resolve(cacheFolder, 'segment%03d.ts');
 
 	// Transcoding already exists
 	if (transcodings[id]) {
@@ -50,6 +29,38 @@ export const transcodeVideo = async (params: { id: number; logger: Logger; req: 
 		res.status(200).json({ playlistUrl: `${streamPath}/playlist.m3u8` });
 		return;
 	}
+
+	const mediaPath = await findMediaPath(id);
+
+	if (!mediaPath) {
+		res.status(404).json({ error: 'Video not found' });
+		return;
+	}
+
+	const mediaResolvedPath = path.resolve(__dirname, '../media', mediaPath);
+	const videoPath = await findMediaVideoPath(mediaResolvedPath);
+
+	if (!videoPath) {
+		res.status(404).json({ error: 'Video not found' });
+		return;
+	}
+
+	const cacheFolder = path.resolve(__dirname, `../media/cache/${id}`);
+	const playlistPath = path.resolve(cacheFolder, 'playlist.m3u8');
+	const segmentPath = path.resolve(cacheFolder, 'segment%03d.ts');
+
+	// Transcoding already exists on disk
+	if (fs.existsSync(playlistPath)) {
+		transcodings[id] = {
+			cacheFolder,
+			streamPath: `/streams/${id}`,
+		}
+		res.status(200).json({ playlistUrl: `${transcodings[id].streamPath}/playlist.m3u8` });
+		logger.log('info', `Found cached transcoding for video ${id}`);
+		return;
+	}
+
+	// Create transcoding
 
 	if (!fs.existsSync(cacheFolder)) {
 		fs.mkdirSync(cacheFolder, { recursive: true });
@@ -87,7 +98,7 @@ export const transcodeVideo = async (params: { id: number; logger: Logger; req: 
 
 /*
  * /streams/:id/:file
- * Static serve of transcoded video files
+ * -> static serve of transcoded video files
  */
 const acceptedVideoFiles = ['.m3u8', '.ts'];
 export const streamVideoFile = async (params: {
@@ -111,6 +122,11 @@ export const streamVideoFile = async (params: {
 	res.sendFile(filePath);
 };
 
+/**
+ * Utility functions
+ */
+
+// Check if path is valid
 const validPath = (path: string): boolean => {
 	return !(path.includes('..') || path.includes('/') || path.includes('\\'));
 };

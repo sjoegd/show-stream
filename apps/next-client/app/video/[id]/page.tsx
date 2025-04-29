@@ -10,11 +10,11 @@ export default function VideoPage() {
 	const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
 
 	useEffect(() => {
-		const fetchPlaylistUrl = async () => {
-			const { playlistUrl } = await transcodeAPI(Number(id));
+		const getPlaylistUrl = async () => {
+			const playlistUrl = await transcodeAPI(id as string);
 			setPlaylistUrl(playlistUrl);
 		};
-		fetchPlaylistUrl();
+		getPlaylistUrl();
 	}, [id]);
 
 	return (

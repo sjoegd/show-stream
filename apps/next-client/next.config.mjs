@@ -9,6 +9,18 @@ const nextConfig = {
 	transpilePackages: ['@workspace/ui'],
 	output: 'standalone',
 	outputFileTracingRoot: path.join(__dirname, '../../'),
+	images: {
+		remotePatterns: [new URL('https://image.tmdb.org/t/p/**')]
+	},
+	async rewrites() {
+		// Proxy to Backend API
+		return [
+			{
+				source: '/api/:path*',
+				destination: `${process.env.API_SERVER_URL}/:path*`,
+			},
+		];
+	}
 };
 
 export default nextConfig;

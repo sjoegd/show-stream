@@ -1,50 +1,38 @@
 'use server';
 
-// Server actions to interact with the API server
+/**
+ * Actions to interact with the backend API
+ */
 
 const API_SERVER_URL = process.env.API_SERVER_URL;
 
-// /media/:id
-export const mediaAPI = async (id: number) => {
-	const url = `${API_SERVER_URL}/media/${id}`;
-	const response = await fetch(url);
-	if (response.ok) {
-    const media = await response.json();
-		return media;
-	}
-	return null;
+export const transcodeAPI = async (id: string) => {
+	const response = await fetch(`${API_SERVER_URL}/transcode/${id}`);
+	const { playlistUrl } = (await response.json()) as { playlistUrl: string };
+	return playlistUrl;
 };
 
-// /movies
-export type MoviesData = { id: number }[];
-export const moviesAPI = async () => {
-	const url = `${API_SERVER_URL}/movies`;
-	const response = await fetch(url);
-	if (response.ok) {
-		const movies = await response.json() as MoviesData;
-		return movies;
-	}
-	return [];
+export const getMoviesAPI = async () => {
+	const response = await fetch(`${API_SERVER_URL}/movies`);
+	const { movies } = (await response.json()) as { movies: [{ id: number }] };
+	return movies;
 };
 
-// /shows
-export const showsAPI = async () => {
-	const url = `${API_SERVER_URL}/shows`;
-	const response = await fetch(url);
-	if (response.ok) {
-    const shows = await response.json();
-		return shows;
+interface MovieMetadata {
+	id: number;
+	poster_path: string;
+	title: string;
+	release_date: string;
+}
+export const getMediaAPI = async (id: string): Promise<MovieMetadata | null> => {
+	const response = await fetch(`${API_SERVER_URL}/media/${id}`);
+	const { media, error } = (await response.json()) as {
+		type: string;
+		media: { metadata: MovieMetadata };
+		error?: string;
+	};
+	if (error) {
+		return null;
 	}
-	return null;
-};
-
-// /transcode/:id
-export const transcodeAPI = async (id: number) => {
-	const url = `${API_SERVER_URL}/transcode/${id}`;
-	const response = await fetch(url);
-	if (response.ok) {
-    const transcode = await response.json();
-    return transcode
-	}
-	return null;
+	return media.metadata;
 };

@@ -4,10 +4,9 @@ import Link from 'next/link';
 
 export default function Sidebar() {
 	return (
-		<div className="border-r h-full min-w-48 flex flex-col gap-8">
-			<div className="flex flex-col items-start border-b px-4 py-2">
+		<div className="border-r h-full min-w-56 flex flex-col gap-8">
+			<div className="border-b px-4 py-4">
 				<h1 className="text-2xl">ShowStream</h1>
-				<p className="text-sm">A personal media server</p>
 			</div>
 			<div className="flex flex-col gap-4 px-4">
 				<SidebarSection
@@ -42,7 +41,7 @@ function SidebarSection({
 }) {
 	return (
 		<div className='flex flex-col gap-1'>
-			{sectionHeader && <h2 className="text-sm">{sectionHeader}</h2>}
+			{sectionHeader && <h2 className="text-lg border-b">{sectionHeader}</h2>}
 			<ul>
 				{elements.map((el, i) => (
 					<SidebarElement key={i} {...el} />
@@ -57,7 +56,7 @@ function SidebarElement({ icon, text, href }: { icon: React.ReactNode; text: str
 		<li className='w-full'>
 			<Link className={buttonVariants({ variant: 'ghost', className: "w-full justify-start" })} href={href}>
 				{icon}
-				<span>{text}</span>
+				<span className='text-base'>{text}</span>
 			</Link>
 		</li>
 	);

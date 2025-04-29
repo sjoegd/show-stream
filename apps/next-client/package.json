@@ -10,6 +10,7 @@
 		"lint": "next lint"
 	},
 	"dependencies": {
+		"@radix-ui/react-popover": "^1.1.11",
 		"@workspace/ui": "workspace:*",
 		"hls.js": "^1.6.2",
 		"lucide-react": "0.477.0",

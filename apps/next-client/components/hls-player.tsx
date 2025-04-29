@@ -10,6 +10,7 @@ export default function HLSPlayer({ playlistUrl }: { playlistUrl: string | null 
 		if (!video) return;
 		if (!playlistUrl) return;
 
+		// Ensure we stream from the API
 		playlistUrl = `/api${playlistUrl}`;
 		if (Hls.isSupported()) {
 			hls = new Hls({
