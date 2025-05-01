@@ -1,4 +1,6 @@
-node_modules
+**/node_modules/
+.dockerignore
+Dockerfile
 .git
 .gitignore
 dist
@@ -7,3 +9,4 @@ dist
 .turbo
 data
 media
+.env.example

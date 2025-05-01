@@ -1,10 +1,12 @@
 import cors from 'cors';
 import helmet from 'helmet';
 import express, { type Express } from 'express';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import { createLogger, createLoggerMiddleware } from './log';
-import { type Logger } from 'winston';
+import type { Logger } from 'winston';
 
-export const createServer = (): { app: Express; logger: Logger } => {
+export const createServer = (): { httpServer: http.Server, io: SocketIOServer, app: Express; logger: Logger } => {
 	const app = express();
 	const logger = createLogger();
 
@@ -21,6 +23,11 @@ export const createServer = (): { app: Express; logger: Logger } => {
 		.use(helmet())
 		.use(express.json())
 		.use(express.urlencoded({ extended: true }));
+	
+	const httpServer = http.createServer(app);
+	const io = new SocketIOServer(httpServer, {
+		path: '/socket'
+	})
 
-	return { app, logger };
+	return { httpServer, io, app, logger };
 };

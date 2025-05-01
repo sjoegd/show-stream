@@ -4,8 +4,6 @@ import '@workspace/ui/globals.css';
 // import "@/app/globals.css"
 import { Providers } from '@/components/providers';
 import { Metadata } from 'next';
-import Sidebar from '@/components/sidebar';
-import { headers } from 'next/headers';
 
 const fontSans = Geist({
 	subsets: ['latin'],

@@ -2,8 +2,16 @@ import path from 'path';
 import fs from 'fs';
 import { ensureDbConnection, MediaModel, MetadataModel, MovieModel, ShowModel } from './db';
 import { MovieDb, type TvResult, type MovieResult } from 'moviedb-promise';
-import { type Logger } from 'winston';
-import { type Response, type Request } from 'express';
+import { getTranscoding } from './video';
+import type { Logger } from 'winston';
+import type {
+	BaseAPIResponse,
+	MediaAPIData,
+	ShowsAPIData,
+	MovieAPIData,
+	MoviesAPIData,
+} from '@workspace/types/api-types';
+import type { MediaDocument, ShowDocument, MovieDocument } from '@workspace/types/db-types';
 
 /**
  * Media API
@@ -11,39 +19,40 @@ import { type Response, type Request } from 'express';
  */
 
 // /movies
-// -> all movies (id)
-export const getMovies = async (params: { req: Request; res: Response }) => {
-	const { res } = params;
+// -> data of all movies
+export const getMovies = async (): Promise<BaseAPIResponse & { data?: MoviesAPIData }> => {
 	const { movies, error } = await findMovies();
-	if (error) {
-		res.status(500).json({ error });
-		return;
+	if (movies === undefined || error) {
+		return { status: 400, error };
 	}
-	res.status(200).json({ movies: movies.map(({ id }) => ({ id })) });
+	const moviesData: MovieAPIData[] = [];
+	for (const movie of movies) {
+		const { id, metadata } = movie;
+		const transcoding = await getTranscoding(id);
+		moviesData.push({ id, transcodeStatus: transcoding?.status || 'not ready', metadata });
+	}
+	return { status: 200, data: { movies: moviesData } };
 };
 
 // /shows
-// -> all shows (id)
-export const getShows = async (params: { req: Request; res: Response }) => {
-	const { res } = params;
+// -> data of all shows
+export const getShows = async (): Promise<BaseAPIResponse & { data?: ShowsAPIData }> => {
 	const { shows, error } = await findShows();
-	if (error) {
-		res.status(500).json({ error });
-		return;
+	if (shows === undefined || error) {
+		return { status: 400, error };
 	}
-	res.status(200).json({ shows: shows.map(({ id }) => ({ id })) });
+	return { status: 200, data: { shows: shows.map(({ id }) => ({ id })) } };
 };
 
 // /media/:id
-// -> (movie/show, metadata)
-export const getMedia = async (params: { id: number; req: Request; res: Response }) => {
-	const { id, res } = params;
-	const { type, media, error } = await findMedia(id);
-	if (!media) {
-		res.status(500).json({ error });
-		return;
+// -> data of certain media
+export const getMedia = async (params: { id: number }): Promise<BaseAPIResponse & { data?: MediaAPIData }> => {
+	const { id } = params;
+	const { error, data } = await findMediaData(id);
+	if (error) {
+		return { status: 400, error };
 	}
-	res.status(200).json({ type, media });
+	return { status: 200, data };
 };
 
 /**
@@ -51,13 +60,9 @@ export const getMedia = async (params: { id: number; req: Request; res: Response
  * Creates metadata scan of Movies (later Shows) folder
  */
 
-interface IdentifiedMovie {
-	id: number;
-	path: string;
-	metadata: MovieResult;
-}
-
+type IdentifiedMovie = MovieDocument;
 const moviedb = new MovieDb(process.env.TMDB_API_KEY || '');
+
 export const mediaScan = async (mediaFolder: string, logger: Logger): Promise<{ success: boolean }> => {
 	const identifiedMovies = await movieScan(mediaFolder, logger);
 
@@ -145,50 +150,77 @@ const fetchShowResult = async ({ name, year }: { name: string; year: number }): 
  * Utility functions to find media/videos
  */
 
-export const findMedia = async (id: number) => {
+export const findMediaData = async (id: number): Promise<{ error?: string; data?: MediaAPIData }> => {
 	if (!(await ensureDbConnection())) {
-		return { type: null, media: null, error: 'Database not connected' };
+		return { error: 'Database not connected' };
 	}
 
-	const media = await MediaModel.findOne({ id }).lean();
-	if (!media) {
-		return { type: null, media: null, error: 'Media not found' };
+	const { error, media } = await findMedia(id);
+	if (error || !media) {
+		return { error: 'Media not found' };
 	}
 
 	const { type } = media;
 
 	if (type === 'movie') {
 		const movie = await MovieModel.findOne({ id }).lean();
-		return movie ? { type, media: movie } : { type, media: null, error: 'Movie not found' };
+		const transcoding = await getTranscoding(id);
+		return movie
+			? { data: { type, metadata: movie.metadata, transcodeStatus: transcoding?.status || 'not ready' } }
+			: { error: 'Movie not found' };
 	}
 
-	if (type === 'show') {
-		const show = await ShowModel.findOne({ id }).lean();
-		return show ? { type, media: show } : { type, media: null, error: 'Show not found' };
-	}
+	// if (type === 'show') {
+	// }
 
-	return { type: null, media: null, error: 'Media not found' };
+	return { error: 'Media not found' };
 };
 
-export const findMovies = async () => {
+export const findMedia = async (id: number): Promise<{ error?: string; media?: MediaDocument }> => {
 	if (!(await ensureDbConnection())) {
-		return { movies: [], error: 'Database not connected' };
+		return { error: 'Database not connected' };
 	}
-	const movies = await MovieModel.find({}).select(['id']).lean();
+
+	const media = await MediaModel.findOne({ id }).lean();
+	if (!media) {
+		return { error: 'Media not found' };
+	}
+
+	return { media };
+};
+
+export const findMovies = async (): Promise<{ movies?: MovieDocument[]; error?: string }> => {
+	if (!(await ensureDbConnection())) {
+		return { error: 'Database not connected' };
+	}
+	const movies = await MovieModel.find({}).lean();
 	return { movies };
 };
 
-export const findShows = async () => {
+export const findShows = async (): Promise<{ shows?: ShowDocument[]; error?: string }> => {
 	if (!(await ensureDbConnection())) {
-		return { shows: [], error: 'Database not connected' };
+		return { error: 'Database not connected' };
 	}
 	const shows = await ShowModel.find({}).select(['id']).lean();
 	return { shows };
 };
 
-export const findMediaPath = async (id: number): Promise<string | null> => {
-	const { media } = await findMedia(id);
-	return media?.path || null;
+
+export const findTranscodeMediaInfo = async (id: number): Promise<{ path?: string, title?: string } | null> => {
+	const { error, media } = await findMedia(id);
+
+	if (error || !media) {
+		return null;
+	}
+
+	const { type } = media;
+
+	if (type === 'movie') {
+		const movie = await MovieModel.findOne({ id }).lean();
+		return { path: movie?.path, title: movie?.metadata.title };
+	}
+
+	return null;
 };
 
 const acceptedVideoExtensions = ['.mp4'];

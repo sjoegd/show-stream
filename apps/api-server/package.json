@@ -16,6 +16,7 @@
 		"mongoose": "^8.14.0",
 		"morgan": "^1.10.0",
 		"moviedb-promise": "^4.0.7",
+		"socket.io": "^4.8.1",
 		"winston": "^3.17.0"
 	},
 	"devDependencies": {
@@ -26,6 +27,7 @@
 		"@types/node": "^22.15.2",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
+		"@workspace/types": "workspace:*",
 		"cross-env": "^7.0.3",
 		"nodemon": "^3.1.10",
 		"ts-node": "^10.9.2"

@@ -1,22 +1,24 @@
-// Page showing the list of movies
-export const dynamic = 'force-dynamic';
+'use client';
 
-import MediaCard from '@/components/media-card';
-import MediaCardContainer from '@/components/media-card-container';
-import { getMediaAPI, getMoviesAPI } from '@/lib/api_actions';
 import { Input } from '@workspace/ui/components/input';
+import MediaCard from '@/components/media/media-card';
+import MediaCardContainer from '@/components/media/media-card-container';
+import useSWR from 'swr';
+import { MoviesAPIData } from '@workspace/types/api-types';
+import LoadingCircle from '@/components/loading-circle';
 
-export default async function MoviesPage() {
-	const movies = await getMoviesAPI();
-	let moviesMetadata = [];
-	for (const movie of movies) {
-		const metadata = await getMediaAPI(`${movie.id}`);
-		if (!metadata) continue;
-		moviesMetadata.push(metadata);
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export default function MoviesPage() {
+	const { data, isLoading } = useSWR<MoviesAPIData>('/api/movies', fetcher, { refreshInterval: 1000 });
+
+	if (!data || isLoading) {
+		return (
+			<div className="w-full h-full flex items-center justify-center">
+				<LoadingCircle size="64" />
+			</div>
+		);
 	}
-	// For UI testing
-	moviesMetadata = [...moviesMetadata, ...moviesMetadata, ...moviesMetadata, ...moviesMetadata, ...moviesMetadata, ...moviesMetadata];
-	moviesMetadata = [...moviesMetadata, ...moviesMetadata, ...moviesMetadata, ...moviesMetadata, ...moviesMetadata, ...moviesMetadata];
 
 	return (
 		<div className="w-full max-h-full overflow-y-auto flex flex-col items-center px-4 md:px-16 xl:px-24 py-8 gap-4">
@@ -25,11 +27,10 @@ export default async function MoviesPage() {
 				<Input />
 			</div>
 			<MediaCardContainer>
-				{moviesMetadata.map((metadata, index) => (
-					<MediaCard key={metadata.id + index} {...metadata} />
+				{data?.movies.map((movie) => (
+					<MediaCard key={movie.id} id={movie.id} {...movie.metadata} transcodeStatus={movie.transcodeStatus} />
 				))}
 			</MediaCardContainer>
 		</div>
 	);
 }
-

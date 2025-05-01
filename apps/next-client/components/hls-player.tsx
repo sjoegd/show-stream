@@ -15,7 +15,6 @@ export default function HLSPlayer({ playlistUrl }: { playlistUrl: string | null 
 		if (Hls.isSupported()) {
 			hls = new Hls({
 				debug: true,
-				lowLatencyMode: true,
 			});
 			hls.loadSource(playlistUrl);
 			hls.attachMedia(video);

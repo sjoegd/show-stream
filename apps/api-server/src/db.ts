@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
-import { type MovieResult } from 'moviedb-promise';
+import type {
+	MetadataDocument,
+	MediaDocument,
+	MovieDocument,
+	ShowDocument,
+	TranscodeDocument,
+} from '@workspace/types/db-types';
 
 /**
  * Metadata Database
@@ -11,7 +17,7 @@ import { type MovieResult } from 'moviedb-promise';
  *
  */
 
-const metadataSchema = new mongoose.Schema({
+const metadataSchema = new mongoose.Schema<MetadataDocument>({
 	lastScanTime: { type: Date, required: true, singleton: true },
 });
 export const MetadataModel = mongoose.model('Metadata', metadataSchema);
@@ -34,25 +40,38 @@ export const MetadataModel = mongoose.model('Metadata', metadataSchema);
  *    - id
  *    - folder path
  *    - metadata (moviedb result)
+ *
+ *  Transcode
+ * 	 - id
+ *   - state
+ *   - cache path
+ *   - stream path
+ *   - last request date
  */
 
-const mediaSchema = new mongoose.Schema({
+const mediaSchema = new mongoose.Schema<MediaDocument>({
 	id: { type: Number, required: true, unique: true, primary: true },
 	type: { type: String, enum: ['movie', 'show'], required: true },
 });
-const movieSchema = new mongoose.Schema<{ id: number; path: string; metadata: MovieResult }>({
+const movieSchema = new mongoose.Schema<MovieDocument>({
 	id: { type: Number, required: true, unique: true, primary: true },
 	path: { type: String, required: true },
 	metadata: { type: mongoose.Schema.Types.Mixed, required: true },
 });
-const showSchema = new mongoose.Schema({
+const showSchema = new mongoose.Schema<ShowDocument>({
 	id: { type: Number, required: true, unique: true, primary: true },
 	path: { type: String, required: true },
+});
+const transcodeSchema = new mongoose.Schema<TranscodeDocument>({
+	id: { type: Number, required: true, unique: true, primary: true },
+	status: { type: String, enum: ['not ready', 'in progress', 'ready'], required: true },
+	lastRequestDate: { type: Date },
 });
 
 export const MediaModel = mongoose.model('Media', mediaSchema);
 export const MovieModel = mongoose.model('Movie', movieSchema);
 export const ShowModel = mongoose.model('Show', showSchema);
+export const TranscodeModel = mongoose.model('Transcode', transcodeSchema);
 
 /**
  * Utility functions for database connection
@@ -68,6 +87,9 @@ export const setupDb = async () => {
 	await MediaModel.createCollection();
 	await MovieModel.createCollection();
 	await ShowModel.createCollection();
+	await TranscodeModel.createCollection();
+	// TEMP clear transcodings
+	await TranscodeModel.deleteMany({});
 	return mongoose.connection.readyState === 1;
 };
 
