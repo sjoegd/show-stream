@@ -1,1 +1,0 @@
-// Page showing the list of shows

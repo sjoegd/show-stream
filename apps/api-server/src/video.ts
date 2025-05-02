@@ -3,122 +3,205 @@
 import fs from 'fs';
 import path from 'path';
 import ffmpeg, { ffprobe } from 'fluent-ffmpeg';
-import { type Response, type Request } from 'express';
-import { type Logger } from 'winston';
+import { findTranscodeMediaInfo, findMediaVideoPath } from './media';
+import { sendNotificationToClients } from './notification';
+import { ensureDbConnection, TranscodeModel } from './db';
+import type { Response, Request } from 'express';
+import type { Logger } from 'winston';
+import type { BaseAPIResponse, TranscodePlaylistAPIData, TranscodeRequestAPIData } from '@workspace/types/api-types';
+import type { TranscodeDocument } from '@workspace/types/db-types';
 
-// Should be in a reddis cache or something similar
-// Cache should be cleared after ~time of the certain video not being accessed anymore
-const transcodings: Record<string, { cachePath: string } | null> = {};
-
-/*
- * /transcode/:video
- * TODO: video -> id (need map of id -> path)
- * Request a transcoding of a video
- * If transcoding is already in progress | done, returns the stream path for the playlist
- * If not, start a new transcoding process and returns the stream path for the playlist that is being updated
+/**
+ * Video API
+ * - Transcoding
+ * - Streaming
  */
-interface TranscodeVideoParams {
-	video: string;
+
+/**
+ * /transcode/request/:id
+ */
+export const transcodeRequest = async (params: {
+	id: number;
 	logger: Logger;
-	req: Request;
-	res: Response;
-}
-const acceptedVideos = ['.mp4', '.mkv', '.avi', '.mov'];
-export const transcodeVideo = async (params: TranscodeVideoParams) => {
-	const { video, logger, res } = params;
+}): Promise<BaseAPIResponse & { data?: TranscodeRequestAPIData }> => {
+	const { id, logger } = params;
 
-	if (!acceptedVideos.includes(path.extname(video)) || !validPath(video)) {
-		logger.log('security', `Invalid video request: ${video}`);
-		res.status(400).send('Invalid video');
-		return;
+	const transcoding = await getTranscoding(id);
+	const status = transcoding?.status || 'not ready';
+
+	if (['ready', 'in progress'].includes(status)) {
+		return { status: 200, data: { status } };
 	}
 
-	const videoBase = path.basename(video, path.extname(video));
-	const videoFolder = path.resolve(__dirname, `../media/videos/${videoBase}`);
-	const videoPath = path.resolve(videoFolder, video);
-	const cacheFolder = path.resolve(__dirname, `../media/cache/${videoBase}`);
-	const segmentPath = path.resolve(cacheFolder, 'segment%03d.ts');
-	const cachePath = path.resolve(cacheFolder, 'playlist.m3u8');
+	const mediaTranscodeInfo = await findTranscodeMediaInfo(id);
+	const mediaPath = mediaTranscodeInfo?.path;
+	const mediaTitle = mediaTranscodeInfo?.title;
 
-	if (!fs.existsSync(cacheFolder)) {
-		fs.mkdirSync(cacheFolder, { recursive: true });
+	if (!mediaPath) {
+		return { status: 400, error: 'Media not found', data: { status: 'not ready' } };
 	}
 
-	if (transcodings[videoBase]) {
-		res.status(200).json({ playlistUrl: `/streams/${videoBase}/playlist.m3u8` });
-		return;
+	const mediaResolvedPath = path.resolve(__dirname, '../media', mediaPath);
+	const videoPath = await findMediaVideoPath(mediaResolvedPath);
+
+	if (!videoPath) {
+		return { status: 400, error: 'Video not found', data: { status: 'not ready' } };
 	}
 
-	transcodings[videoBase] = {
-		cachePath,
-	};
+	const cachePath = getCachePath(id);
+	const playlistPath = path.resolve(cachePath, 'playlist.m3u8');
+	const segmentPath = path.resolve(cachePath, 'segment%03d.ts');
+
+	if (fs.existsSync(playlistPath)) {
+		logger.log('info', `Found cached transcoding for video ${id}`);
+		setTranscoding(id, { status: 'ready' });
+		return { status: 200, data: { status: 'ready' } };
+	}
+
+	// Create transcoding
+
+	if (!fs.existsSync(cachePath)) {
+		fs.mkdirSync(cachePath, { recursive: true });
+	}
 
 	// Convert to HSL Format
 	// TODO:
 	// - Update ffmpeg
 	// - 480p 720p 1080p
-	// - Encode using libx264, aac
+	// - Encode using libx264
+	// - Encode using libx264
 
-	ffmpeg()
-		.input(videoPath)
-		.output(cachePath)
-		.outputOptions([
-			'-c copy',
-			'-hls_time 10',
-			'-hls_playlist_type vod',
-			'-hls_list_size 0',
-			'-hls_flags independent_segments',
-			'-hls_segment_type mpegts',
-			`-hls_segment_filename ${segmentPath}`,
-			'-f hls',
-		])
-		.on('end', () => {
-			res.status(200).json({ playlistUrl: `/streams/${videoBase}/playlist.m3u8` });
-		})
-		.on('progress', () => {})
-		.run();
+	return await new Promise((resolve) => {
+		ffmpeg()
+			.input(videoPath)
+			.output(playlistPath)
+			.outputOptions([
+				'-c copy',
+				'-hls_time 6',
+				'-hls_playlist_type vod',
+				'-hls_list_size 0',
+				'-hls_flags independent_segments',
+				'-hls_segment_type mpegts',
+				`-hls_segment_filename ${segmentPath}`,
+				'-f hls',
+			])
+			.on('start', () => {
+				setTranscoding(id, { status: 'in progress' });
+				resolve({ status: 200, data: { status: 'in progress' } });
+			})
+			.on('end', () => {
+				// TEMP delay
+				setTimeout(() => {
+					setTranscoding(id, { status: 'ready' });
+					sendNotificationToClients({ type: 'transcode:ready', data: { title: mediaTitle || String(id) } });
+				}, 10000);
+			})
+			.run();
+	});
+};
+
+/**
+ * /transcode/playlist/:id
+ */
+export const transcodePlaylist = async (params: {
+	id: number;
+	logger: Logger;
+}): Promise<BaseAPIResponse & { data?: TranscodePlaylistAPIData }> => {
+	const { id } = params;
+	const transcoding = await getTranscoding(id);
+
+	if (transcoding?.status !== 'ready') {
+		return { status: 404, error: 'Transcoding not found' };
+	}
+
+	setTranscoding(id, { lastRequestDate: new Date() });
+
+	return { status: 200, data: { playlistUrl: `${getStreamPath(id)}/playlist.m3u8` } };
 };
 
 /*
- * /streams/:video/:file
- * TODO: video -> id
- * Static serve of transcoded video files
+ * /streams/:id/:file
+ * -> static serve of transcoded video files
+ * -> static serve of transcoded video files
  */
-interface StreamVideoFileParams {
-	video: string;
+const acceptedVideoFiles = ['.m3u8', '.ts'];
+export const streamVideoFile = async (params: {
+	id: number;
 	file: string;
 	logger: Logger;
 	req: Request;
 	res: Response;
-}
-const acceptedVideoFiles = ['.m3u8', '.ts'];
-export const streamVideoFile = async (params: StreamVideoFileParams) => {
-	const { video, file, logger, res } = params;
+}) => {
+	const { id, file, logger, res } = params;
+	const transcoding = await getTranscoding(id);
 
-	if (!acceptedVideoFiles.includes(path.extname(file)) || !validPath(video) || !validPath(file)) {
-		logger.log('security', `Invalid video file request: ${video}/${file}`);
+	if (!acceptedVideoFiles.includes(path.extname(file)) || !validPath(file) || !validPath(String(id)) || transcoding?.status !== 'ready') {
+		logger.log('security', `Invalid video file request: ${id}/${file}`);
 		res.status(400).send('Invalid video file');
 		return;
 	}
 
-	if (file.endsWith('.m3u8')) {
-		logger.log('info', `Request for ${video} with playlist: ${file}`);
-
-		const videoTranscoding = transcodings[video];
-		if (!videoTranscoding) {
-			res.status(404).send('Transcoding not found');
-			return;
-		}
-
-		const { cachePath } = videoTranscoding;
-		res.sendFile(cachePath);
-		return;
-	}
-
-	const filePath = path.resolve(__dirname, `../media/cache/${video}/${file}`);
+	const filePath = path.resolve(getCachePath(id), file);
 	res.sendFile(filePath);
 };
 
+/**
+ * Utility functions
+ */
+
+// Check if path is valid
+/**
+ * Utility functions
+ */
+
+// Check if path is valid
 const validPath = (path: string): boolean => {
 	return !(path.includes('..') || path.includes('/') || path.includes('\\'));
 };
+
+const cachedTranscodings: Record<number, TranscodeDocument> = {};
+
+export const getTranscoding = async (id: number): Promise<TranscodeDocument | null> => {
+	if (cachedTranscodings[id]) {
+		return cachedTranscodings[id];
+	}
+
+	if (!ensureDbConnection()) {
+		return null;
+	}
+
+	const transcoding = await TranscodeModel.findOne({ id }).lean();
+
+	if (transcoding) {
+		cachedTranscodings[id] = transcoding;
+	}
+
+	return transcoding;
+};
+
+export const setTranscoding = async (id: number, update: Partial<TranscodeDocument>): Promise<boolean> => {
+	if (cachedTranscodings[id]) {
+		cachedTranscodings[id] = { ...cachedTranscodings[id], ...update };
+	}
+
+	if (!ensureDbConnection()) {
+		return false;
+	}
+
+	const exists = await TranscodeModel.exists({ id });
+	if (!exists) {
+		await TranscodeModel.create({ id, ...update });
+	} else {
+		await TranscodeModel.updateOne({ id }, { $set: update });
+	}
+
+	return true;
+};
+
+const getCachePath = (id: number): string => {
+	return path.resolve(__dirname, `../media/cache/${id}`);
+};
+
+const getStreamPath = (id: number): string => {
+	return `/streams/${id}`;
+}

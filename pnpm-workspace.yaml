@@ -7,4 +7,17 @@ overrides:
   '@babel/runtime-corejs3@<7.26.10': '>=7.26.10'
 
 ignoredBuiltDependencies:
+  - color-name
+  - color-string
   - core-js-pure
+  - is-arrayish
+  - semver
+  - simple-swizzle
+
+onlyBuiltDependencies:
+  - color-name
+  - color-string
+  - is-arrayish
+  - semver
+  - sharp
+  - simple-swizzle

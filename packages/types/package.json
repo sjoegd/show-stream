@@ -1,0 +1,12 @@
+{
+	"name": "@workspace/types",
+	"version": "0.0.0",
+	"private": true,
+	"exports": {
+		"./*": "./src/*.ts"
+	},
+	"devDependencies": {
+		"moviedb-promise": "^4.0.7",
+		"@workspace/typescript-config": "workspace:*"
+	}
+}
