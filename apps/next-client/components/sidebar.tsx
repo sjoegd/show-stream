@@ -43,6 +43,7 @@ function SidebarSection({
 	return (
 		<div className='flex flex-col gap-1'>
 			{sectionHeader && <h2 className="text-lg border-b">{sectionHeader}</h2>}
+			{sectionHeader && <h2 className="text-lg border-b">{sectionHeader}</h2>}
 			<ul>
 				{elements.map((el, i) => (
 					<SidebarElement key={i} {...el} />
@@ -57,6 +58,7 @@ function SidebarElement({ icon, text, href }: { icon: React.ReactNode; text: str
 		<li className='w-full'>
 			<Link className={buttonVariants({ variant: 'ghost', className: "w-full justify-start" })} href={href}>
 				{icon}
+				<span className='text-base'>{text}</span>
 				<span className='text-base'>{text}</span>
 			</Link>
 		</li>
