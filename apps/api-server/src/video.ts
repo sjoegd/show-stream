@@ -28,11 +28,6 @@ export const transcodeRequest = async (params: {
 
 	const transcoding = await getTranscoding(id);
 	const status = transcoding?.status || 'not ready';
-}): Promise<BaseAPIResponse & { data?: TranscodeRequestAPIData }> => {
-	const { id, logger } = params;
-
-	const transcoding = await getTranscoding(id);
-	const status = transcoding?.status || 'not ready';
 
 	if (['ready', 'in progress'].includes(status)) {
 		return { status: 200, data: { status } };
@@ -110,25 +105,6 @@ export const transcodeRequest = async (params: {
 	});
 };
 
-/**
- * /transcode/playlist/:id
- */
-export const transcodePlaylist = async (params: {
-	id: number;
-	logger: Logger;
-}): Promise<BaseAPIResponse & { data?: TranscodePlaylistAPIData }> => {
-	const { id } = params;
-	const transcoding = await getTranscoding(id);
-
-	if (transcoding?.status !== 'ready') {
-		return { status: 404, error: 'Transcoding not found' };
-	}
-
-	setTranscoding(id, { lastRequestDate: new Date() });
-
-	return { status: 200, data: { playlistUrl: `${getStreamPath(id)}/playlist.m3u8` } };
-};
-
 /*
  * /streams/:id/:file
  * -> static serve of transcoded video files
@@ -157,9 +133,6 @@ export const transcodePlaylist = async (params: {
  * -> static serve of transcoded video files
  * -> static serve of transcoded video files
  */
-const acceptedVideoFiles = ['.m3u8', '.ts'];
-export const streamVideoFile = async (params: {
-	id: number;
 const acceptedVideoFiles = ['.m3u8', '.ts'];
 export const streamVideoFile = async (params: {
 	id: number;
@@ -173,8 +146,6 @@ export const streamVideoFile = async (params: {
 
 	if (!acceptedVideoFiles.includes(path.extname(file)) || !validPath(file) || !validPath(String(id)) || transcoding?.status !== 'ready') {
 		logger.log('security', `Invalid video file request: ${id}/${file}`);
-	if (!acceptedVideoFiles.includes(path.extname(file)) || !validPath(file) || !validPath(String(id)) || transcoding?.status !== 'ready') {
-		logger.log('security', `Invalid video file request: ${id}/${file}`);
 		res.status(400).send('Invalid video file');
 		return;
 	}
@@ -183,21 +154,6 @@ export const streamVideoFile = async (params: {
 	res.sendFile(filePath);
 };
 
-/**
- * Utility functions
- */
-
-// Check if path is valid
-/**
- * Utility functions
- */
-
-// Check if path is valid
-/**
- * Utility functions
- */
-
-// Check if path is valid
 /**
  * Utility functions
  */
