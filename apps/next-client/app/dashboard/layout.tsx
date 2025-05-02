@@ -1,3 +1,4 @@
+import DashboardToaster from "@/components/dashboard-toaster";
 import Sidebar from "@/components/sidebar";
 
 export default function DashboardLayout({
@@ -7,9 +8,10 @@ export default function DashboardLayout({
 }>) {
 
   return (
-    <div className="flex h-screen w-full">
-      <Sidebar />
-      {children}
-    </div>
-  )
+		<div className="flex h-screen w-full">
+			<Sidebar />
+			{children}
+			<DashboardToaster />
+		</div>
+	);
 }

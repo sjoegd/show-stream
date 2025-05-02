@@ -1,25 +1,36 @@
-// Page showing the list of movies
+'use client';
 
-import MediaCard from '@/components/media-card';
-import { moviesAPI } from '@/lib/api_actions';
 import { Input } from '@workspace/ui/components/input';
+import MediaCard from '@/components/media/media-card';
+import MediaCardContainer from '@/components/media/media-card-container';
+import useSWR from 'swr';
+import { MoviesAPIData } from '@workspace/types/api-types';
+import LoadingCircle from '@/components/loading-circle';
 
-export default async function MoviesPage() {
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-	const movies = await moviesAPI();
+export default function MoviesPage() {
+	const { data, isLoading } = useSWR<MoviesAPIData>('/api/movies', fetcher, { refreshInterval: 1000 });
+
+	if (!data || isLoading) {
+		return (
+			<div className="w-full h-full flex items-center justify-center">
+				<LoadingCircle size="64" />
+			</div>
+		);
+	}
 
 	return (
-		<div className="w-full max-h-full overflow-y-auto flex flex-col items-center px-16 py-8 gap-4">
+		<div className="w-full max-h-full overflow-y-auto flex flex-col items-center px-4 md:px-16 xl:px-24 py-8 gap-4">
 			<h1 className="text-3xl w-full">Movies</h1>
 			<div className="w-full min-h-fit">
 				<Input />
 			</div>
-			<div className="flex w-full min-h-fit bg-accent gap-2">
-				{movies.map((movie) => (<MediaCard key={movie.id} id={movie.id} />))}
-      </div>
-			<div className="flex w-full min-h-96 bg-accent"></div>
-			<div className="flex w-full min-h-96 bg-accent"></div>
-			<div className="flex w-full min-h-96 bg-accent"></div>
+			<MediaCardContainer>
+				{data?.movies.map((movie) => (
+					<MediaCard key={movie.id} id={movie.id} {...movie.metadata} transcodeStatus={movie.transcodeStatus} />
+				))}
+			</MediaCardContainer>
 		</div>
 	);
 }

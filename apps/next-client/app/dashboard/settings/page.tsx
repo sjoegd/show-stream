@@ -1,5 +1,10 @@
-// Page for the settings / preferences
+'use client';
+
+import { useUser } from "@/hooks/use-user";
 
 export default function SettingsPage() {
-	return <></>;
+
+	const user = useUser();
+
+	return <div>{JSON.stringify(user)}</div>
 }

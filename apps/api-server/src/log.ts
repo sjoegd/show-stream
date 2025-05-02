@@ -2,6 +2,11 @@ import winston from 'winston';
 import morgan from 'morgan';
 import path from 'path';
 
+/**
+ * Winston Logger
+ * -> Logs to error / combined files
+ * -> Logs to console
+ */
 export const createLogger = () => {
 	const logger = winston.createLogger({
 		levels: {
@@ -22,6 +27,10 @@ export const createLogger = () => {
 	return logger;
 };
 
+/**
+ * HTTP Logger Middleware
+ * -> Morgan middleware that logs HTTP
+ */
 export const createLoggerMiddleware = (logger: winston.Logger) => {
 	const stream = {
 		write: (message: string) => logger.http(message.split('\n')[0]?.trimEnd()),
