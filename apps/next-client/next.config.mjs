@@ -10,7 +10,7 @@ const nextConfig = {
 	output: 'standalone',
 	outputFileTracingRoot: path.join(__dirname, '../../'),
 	images: {
-		remotePatterns: [new URL('https://image.tmdb.org/t/p/**')]
+		remotePatterns: [new URL('https://image.tmdb.org/t/p/**')],
 	},
 	async rewrites() {
 		// Proxy to Backend API
@@ -22,9 +22,9 @@ const nextConfig = {
 			{
 				source: '/socket-api:path*',
 				destination: `${process.env.API_SERVER_URL}/socket/socket-io:path*`,
-			}
+			},
 		];
-	}
+	},
 };
 
 export default nextConfig;

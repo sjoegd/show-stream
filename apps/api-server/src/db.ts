@@ -5,7 +5,7 @@ import type {
 	MovieDocument,
 	ShowDocument,
 	TranscodeDocument,
-	UserDocument
+	UserDocument,
 } from '@workspace/types/db-types';
 
 /**
@@ -76,18 +76,18 @@ export const TranscodeModel = mongoose.model('Transcode', transcodeSchema);
 
 /**
  * User Database
- * 
+ *
  * Schemas
- * 	
+ *
  *  User
  * 	 - username
  *   - password
  */
 
 const userScheme = new mongoose.Schema<UserDocument>({
-	username: { type: String, unique: true, required: true},
+	username: { type: String, unique: true, required: true },
 	password: { type: String, required: true },
-})
+});
 
 export const UserModel = mongoose.model('User', userScheme);
 

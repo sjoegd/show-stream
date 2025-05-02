@@ -1,11 +1,11 @@
 'use client';
 
-import { Input } from '@workspace/ui/components/input';
-import MediaCard from '@/components/media/media-card';
-import MediaCardContainer from '@/components/media/media-card-container';
 import useSWR from 'swr';
-import { MoviesAPIData } from '@workspace/types/api-types';
+import MediaCardContainer from '@/components/media/media-card-container';
+import MediaCard from '@/components/media/media-card';
 import LoadingCircle from '@/components/loading-circle';
+import { Input } from '@workspace/ui/components/input';
+import type { MoviesAPIData } from '@workspace/types/api-types';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

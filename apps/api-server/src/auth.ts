@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ensureDbConnection, UserModel } from './db';
-import { RequestHandler } from 'express';
 import { AuthenticateAPIData, BaseAPIResponse, LoginAPIData, RegisterAPIData, User } from '@workspace/types/api-types';
 
 /**
@@ -56,7 +55,7 @@ export const login = async (params: {
 			return { status: 401, error: 'Login failed' };
 		}
 
-		const userData: User = { userId: String(user._id), username: user.username }
+		const userData: User = { userId: String(user._id), username: user.username };
 
 		const token = jwt.sign(userData, process.env.JWT_SECRET as string, {
 			expiresIn: Number(process.env.JWT_EXPIRES_IN),

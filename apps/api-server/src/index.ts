@@ -60,17 +60,17 @@ app.post('/login', async (req, res) => {
 	}
 	const { status, error, data } = await login({ username: body.username, password: body.password });
 	res.status(status).json(data);
-})
+});
 
 app.post('/authenticate', async (req, res) => {
 	const body = req.body;
-	if(!body.token) {
+	if (!body.token) {
 		res.status(400).send('Token is required');
 		return;
 	}
 	const { status, error, data } = await authenticate({ token: body.token });
 	res.status(status).json(data);
-})
+});
 
 app.get('/scan', async (_req, res) => {
 	const mediaFolder = process.env.MEDIA_FOLDER || path.resolve(__dirname, '../media');

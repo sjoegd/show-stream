@@ -144,7 +144,12 @@ export const streamVideoFile = async (params: {
 	const { id, file, logger, res } = params;
 	const transcoding = await getTranscoding(id);
 
-	if (!acceptedVideoFiles.includes(path.extname(file)) || !validPath(file) || !validPath(String(id)) || transcoding?.status !== 'ready') {
+	if (
+		!acceptedVideoFiles.includes(path.extname(file)) ||
+		!validPath(file) ||
+		!validPath(String(id)) ||
+		transcoding?.status !== 'ready'
+	) {
 		logger.log('security', `Invalid video file request: ${id}/${file}`);
 		res.status(400).send('Invalid video file');
 		return;
@@ -208,4 +213,4 @@ const getCachePath = (id: number): string => {
 
 const getStreamPath = (id: number): string => {
 	return `/streams/${id}`;
-}
+};

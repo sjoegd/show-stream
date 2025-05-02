@@ -12,7 +12,6 @@ export const createServer = (): { httpServer: http.Server; io: SocketIOServer; a
 
 	const NEXT_CLIENT_URL = process.env.NEXT_CLIENT_URL || '';
 
-
 	app
 		.use(
 			cors({
@@ -23,7 +22,7 @@ export const createServer = (): { httpServer: http.Server; io: SocketIOServer; a
 		.use(createLoggerMiddleware(logger))
 		.use(helmet())
 		.use(express.json())
-		.use(express.urlencoded({ extended: true }))
+		.use(express.urlencoded({ extended: true }));
 
 	const httpServer = http.createServer(app);
 	const io = new SocketIOServer(httpServer, {

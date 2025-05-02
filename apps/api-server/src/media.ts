@@ -205,8 +205,7 @@ export const findShows = async (): Promise<{ shows?: ShowDocument[]; error?: str
 	return { shows };
 };
 
-
-export const findTranscodeMediaInfo = async (id: number): Promise<{ path?: string, title?: string } | null> => {
+export const findTranscodeMediaInfo = async (id: number): Promise<{ path?: string; title?: string } | null> => {
 	const { error, media } = await findMedia(id);
 
 	if (error || !media) {

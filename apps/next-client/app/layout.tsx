@@ -19,7 +19,7 @@ const fontZain = Zain({
 	weight: '400',
 	subsets: ['latin'],
 	variable: '--font-zain',
-})
+});
 
 export const metadata: Metadata = {
 	title: 'ShowStream client',

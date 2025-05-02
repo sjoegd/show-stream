@@ -26,7 +26,9 @@ export default function TranscodeStatusIcon({
 		<TooltipProvider>
 			<Tooltip>
 				<TooltipTrigger>{icons[transcodeStatus]}</TooltipTrigger>
-				<TooltipContent side='top' sideOffset={offset} >{tooltips[transcodeStatus]}</TooltipContent>
+				<TooltipContent side="top" sideOffset={offset}>
+					{tooltips[transcodeStatus]}
+				</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>
 	);
