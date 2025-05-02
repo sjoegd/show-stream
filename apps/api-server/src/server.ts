@@ -7,14 +7,18 @@ import { createLogger, createLoggerMiddleware } from './log';
 import type { Logger } from 'winston';
 
 export const createServer = (): { httpServer: http.Server; io: SocketIOServer; app: Express; logger: Logger } => {
+export const createServer = (): { httpServer: http.Server; io: SocketIOServer; app: Express; logger: Logger } => {
 	const app = express();
 	const logger = createLogger();
+
+	const NEXT_CLIENT_URL = process.env.NEXT_CLIENT_URL || '';
 
 	const NEXT_CLIENT_URL = process.env.NEXT_CLIENT_URL || '';
 
 	app
 		.use(
 			cors({
+				origin: [NEXT_CLIENT_URL],
 				origin: [NEXT_CLIENT_URL],
 				credentials: true,
 			}),
@@ -24,6 +28,12 @@ export const createServer = (): { httpServer: http.Server; io: SocketIOServer; a
 		.use(express.json())
 		.use(express.urlencoded({ extended: true }))
 
+	const httpServer = http.createServer(app);
+	const io = new SocketIOServer(httpServer, {
+		path: '/socket',
+	});
+
+	return { httpServer, io, app, logger };
 	const httpServer = http.createServer(app);
 	const io = new SocketIOServer(httpServer, {
 		path: '/socket',
