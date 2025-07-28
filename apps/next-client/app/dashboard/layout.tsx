@@ -1,5 +1,5 @@
-import DashboardToaster from '@/components/dashboard-toaster';
-import Sidebar from '@/components/sidebar';
+import DashboardToaster from '@/components/dashboard/dashboard-toaster';
+import Sidebar from '@/components/dashboard/sidebar';
 
 export default function DashboardLayout({
 	children,

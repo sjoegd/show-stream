@@ -33,9 +33,7 @@ export const transcodeRequest = async (params: {
 		return { status: 200, data: { status } };
 	}
 
-	const mediaTranscodeInfo = await findTranscodeMediaInfo(id);
-	const mediaPath = mediaTranscodeInfo?.path;
-	const mediaTitle = mediaTranscodeInfo?.title;
+	const { path: mediaPath, title: mediaTitle } = (await findTranscodeMediaInfo(id)) || {};
 
 	if (!mediaPath) {
 		return { status: 400, error: 'Media not found', data: { status: 'not ready' } };
@@ -58,11 +56,6 @@ export const transcodeRequest = async (params: {
 		return { status: 200, data: { status: 'ready' } };
 	}
 
-	// Create transcoding
-
-	if (!fs.existsSync(cachePath)) {
-		fs.mkdirSync(cachePath, { recursive: true });
-	}
 	// Create transcoding
 
 	if (!fs.existsSync(cachePath)) {
@@ -130,7 +123,6 @@ export const transcodePlaylist = async (params: {
 
 /*
  * /streams/:id/:file
- * -> static serve of transcoded video files
  * -> static serve of transcoded video files
  */
 const acceptedVideoFiles = ['.m3u8', '.ts'];

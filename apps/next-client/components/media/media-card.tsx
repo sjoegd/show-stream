@@ -2,13 +2,13 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Card, CardContent, CardFooter } from '@workspace/ui/components/card';
-import { PlayIcon } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { PlayIcon } from 'lucide-react';
 import { useFetchTranscodeRequest } from '@/hooks/use-video-api';
-import MoreOptionsPopover from './more-options-popover';
-import TranscodeStatusIcon from './transcode-status-icon';
-import type { TranscodeStatus } from '@workspace/types/db-types';
+import MoreOptionsPopover from '@/components/media/more-options-popover';
+import TranscodeStatusIcon from '@/components/media/transcode-status-icon';
+import { Card, CardContent, CardFooter } from '@workspace/ui/components/card';
+import type { MediaType, TranscodeStatus } from '@workspace/types/db-types';
 
 export default function MediaCard(props: {
 	id: number;
@@ -16,8 +16,9 @@ export default function MediaCard(props: {
 	poster_path?: string;
 	release_date?: string;
 	transcodeStatus: TranscodeStatus;
+	mediaType: MediaType;
 }) {
-	const { id, title, poster_path, release_date, transcodeStatus } = props;
+	const { id, title, poster_path, release_date, transcodeStatus, mediaType } = props;
 
 	return (
 		<Card className="p-0 rounded-sm overflow-clip gap-0 select-none w-full max-w-56">
@@ -45,7 +46,7 @@ export default function MediaCard(props: {
 			</CardContent>
 			<CardFooter className="p-2 border-t-0">
 				<div className="flex flex-col text-center w-full">
-					<Link href={`/dashboard/media/${id}`} className="w-full h-full">
+					<Link href={`/dashboard/${mediaType}s/${id}`} className="w-full h-full">
 						<h2 className="text-base whitespace-nowrap truncate max-w-full hover:underline">{title}</h2>
 					</Link>
 					<p className="text-sm">{release_date?.split('-')[0]}</p>

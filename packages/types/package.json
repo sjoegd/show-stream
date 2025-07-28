@@ -6,7 +6,7 @@
 		"./*": "./src/*.ts"
 	},
 	"devDependencies": {
-		"moviedb-promise": "^4.0.7",
-		"@workspace/typescript-config": "workspace:*"
+		"@workspace/typescript-config": "workspace:*",
+		"tmdb-ts": "^2.0.1"
 	}
 }

@@ -3,14 +3,24 @@
 import useSWR from 'swr';
 import MediaCardContainer from '@/components/media/media-card-container';
 import MediaCard from '@/components/media/media-card';
-import LoadingCircle from '@/components/loading-circle';
-import { Input } from '@workspace/ui/components/input';
+import LoadingCircle from '@/components/icons/loading-circle';
+import { MediaPageContainer, MediaPageHeader, MediaPageBrowseBar } from '@/components/media/media-page';
+import { Filter, Search, Sort } from '@/components/media/media-browser';
+import { useActiveFilterCount, useSearchTerm } from '@/hooks/use-media-browser';
+import { useFilterMovies, useMoviesFilterInput, useMoviesBrowserContext, useSortMovies } from '@/hooks/use-movies-browser';
 import type { MoviesAPIData } from '@workspace/types/api-types';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MoviesPage() {
 	const { data, isLoading } = useSWR<MoviesAPIData>('/api/movies', fetcher, { refreshInterval: 1000 });
+
+	const { searchState, sortState, filterSelectionState, filterSelectedState } = useMoviesBrowserContext();
+	const searchTerm = useSearchTerm(searchState);
+	const filterInput = useMoviesFilterInput(data?.movies || []);
+	const activeFilterCount = useActiveFilterCount(filterInput, filterSelectionState);
+	const filteredMovies = useFilterMovies(data?.movies || [], searchTerm, filterInput, filterSelectedState);
+	const sortedMovies = useSortMovies(filteredMovies, sortState.sortOption);
 
 	if (!data || isLoading) {
 		return (
@@ -21,16 +31,30 @@ export default function MoviesPage() {
 	}
 
 	return (
-		<div className="w-full max-h-full overflow-y-auto flex flex-col items-center px-4 md:px-16 xl:px-24 py-8 gap-4">
-			<h1 className="text-3xl w-full">Movies</h1>
-			<div className="w-full min-h-fit">
-				<Input />
-			</div>
+		<MediaPageContainer>
+			<MediaPageHeader header="Movies" />
+			<MediaPageBrowseBar
+				search={<Search {...searchState} media="movies" />}
+				sort={<Sort {...sortState} />}
+				filter={
+					<Filter
+						input={filterInput}
+						selection={filterSelectionState}
+						activeFiltersCount={activeFilterCount}
+						applyFilter={() => filterSelectedState.applyFilter(filterSelectionState)}
+					/>
+				}
+			/>
 			<MediaCardContainer>
-				{data?.movies.map((movie) => (
-					<MediaCard key={movie.id} id={movie.id} {...movie.metadata} transcodeStatus={movie.transcodeStatus} />
+				{sortedMovies.map((movie) => (
+					<MediaCard
+						key={movie.details.id}
+						transcodeStatus={movie.transcodeStatus || 'not ready'}
+						mediaType="movie"
+						{...movie.details}
+					/>
 				))}
 			</MediaCardContainer>
-		</div>
+		</MediaPageContainer>
 	);
 }

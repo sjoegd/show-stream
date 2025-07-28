@@ -1,5 +1,6 @@
 'use client';
 
+import Backward from '@/components/dashboard/backward';
 import HLSPlayer from '@/components/hls-player';
 import { useFetchTranscodePlaylist } from '@/hooks/use-video-api';
 import { useParams } from 'next/navigation';
@@ -19,7 +20,8 @@ export default function VideoPage() {
 	}, [id]);
 
 	return (
-		<div className="flex items-center justify-center h-screen">
+		<div className="relative flex items-center justify-center h-screen">
+			<Backward className='top-6 left-12 z-10' />
 			<HLSPlayer playlistUrl={playlistUrl} />
 		</div>
 	);

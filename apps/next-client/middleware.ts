@@ -9,22 +9,23 @@ import { verifyToken } from '@/lib/jwt';
 export async function middleware(request: NextRequest) {
 	const cookieToken = request.cookies.get('authToken');
 
-	// No token
+	// No token, redirect to /login
 	if (!cookieToken) {
-		console.log('No token, redirecting to /login');
 		return NextResponse.redirect(new URL('/login', request.url));
 	}
 
 	const token = cookieToken.value;
 	const { valid, user } = (await verifyToken(token)) || {};
 
-	// Token exists, but invalid, so we delete it
+	// Token exists, but its invalid, so we delete it
+	// And redirect to /login
 	if (!valid || !user) {
-		console.log('Invalid token, redirecting to /login');
 		const response = NextResponse.redirect(new URL('/login', request.url));
 		response.cookies.delete('authToken');
 		return response;
 	}
+
+	// TODO: If /login and valid, redirect to /
 
 	// Valid token, allow request
 	return NextResponse.next();

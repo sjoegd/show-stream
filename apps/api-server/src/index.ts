@@ -11,7 +11,7 @@ import path from 'path';
 import { createServer } from './server';
 import { setupDb } from './db';
 import { streamVideoFile, transcodePlaylist, transcodeRequest } from './video';
-import { getMedia, getMovies, getShows, mediaScan } from './media';
+import { getMovie, getMovies, getShows, mediaScan } from './media';
 import { removeSocketNotifications, setupSocketNotifications } from './notification';
 import { login, register, authenticate } from './auth';
 
@@ -26,6 +26,9 @@ setupDb().then((connected: boolean) => {
 		return;
 	}
 	logger.log('info', 'Succesfully connected to MongoDB database');
+
+	// Create TEMP user
+	register({ username: 'admin', password: 'admin'})
 });
 
 // Socket.io Setup
@@ -109,9 +112,9 @@ app.get('/shows', async (_req, res) => {
 	res.status(status).json(data);
 });
 
-app.get('/media/:id', async (req, res) => {
+app.get('/movie/:id', async (req, res) => {
 	const { id } = req.params;
-	const { status, data } = await getMedia({ id: Number(id) });
+	const { status, data } = await getMovie({ id: Number(id) });
 	res.status(status).json(data);
 });
 

@@ -1,17 +1,20 @@
 import path from 'path';
 import fs from 'fs';
 import { ensureDbConnection, MediaModel, MetadataModel, MovieModel, ShowModel } from './db';
-import { MovieDb, type TvResult, type MovieResult } from 'moviedb-promise';
 import { getTranscoding } from './video';
+import { TMDB } from 'tmdb-ts';
+import type { MovieDetails, TvShowDetails } from 'tmdb-ts';
 import type { Logger } from 'winston';
 import type {
 	BaseAPIResponse,
-	MediaAPIData,
-	ShowsAPIData,
 	MovieAPIData,
+	MovieMetadata,
 	MoviesAPIData,
+	ShowsAPIData,
 } from '@workspace/types/api-types';
-import type { MediaDocument, ShowDocument, MovieDocument } from '@workspace/types/db-types';
+import type { MediaDocument, ShowDocument, MovieDocument, MediaType } from '@workspace/types/db-types';
+
+const includedCrewJobs = ['Director'];
 
 /**
  * Media API
@@ -19,41 +22,45 @@ import type { MediaDocument, ShowDocument, MovieDocument } from '@workspace/type
  */
 
 // /movies
-// -> data of all movies
+// -> metadata of all movies
 export const getMovies = async (): Promise<BaseAPIResponse & { data?: MoviesAPIData }> => {
 	const { movies, error } = await findMovies();
 	if (movies === undefined || error) {
 		return { status: 400, error };
 	}
-	const moviesData: MovieAPIData[] = [];
+	const moviesData: MovieMetadata[] = [];
 	for (const movie of movies) {
 		const { id, metadata } = movie;
 		const transcoding = await getTranscoding(id);
-		moviesData.push({ id, transcodeStatus: transcoding?.status || 'not ready', metadata });
+		moviesData.push({ ...metadata, transcodeStatus: transcoding?.status || 'not ready' });
 	}
 	return { status: 200, data: { movies: moviesData } };
 };
 
+// /movies/:id
+// -> metadata of a specific movie
+export const getMovie = async (params: { id: number }): Promise<BaseAPIResponse & { data?: MovieAPIData }> => {
+	const { id } = params;
+	const { error, type, data } = await findMediaData(id);
+	if (error || type !== 'movie' || !data) {
+		return { status: 400, error: error || 'Movie not found' };
+	}
+	return { status: 200, data };
+}
+
 // /shows
-// -> data of all shows
+// -> metadata of all shows
 export const getShows = async (): Promise<BaseAPIResponse & { data?: ShowsAPIData }> => {
 	const { shows, error } = await findShows();
 	if (shows === undefined || error) {
 		return { status: 400, error };
 	}
-	return { status: 200, data: { shows: shows.map(({ id }) => ({ id })) } };
+	return { status: 200, data: { shows: shows.map((show) => show.metadata) } };
 };
 
-// /media/:id
-// -> data of certain media
-export const getMedia = async (params: { id: number }): Promise<BaseAPIResponse & { data?: MediaAPIData }> => {
-	const { id } = params;
-	const { error, data } = await findMediaData(id);
-	if (error) {
-		return { status: 400, error };
-	}
-	return { status: 200, data };
-};
+// /shows/:id
+// -> metadata of a specific show
+// 
 
 /**
  * Media Scan
@@ -61,7 +68,7 @@ export const getMedia = async (params: { id: number }): Promise<BaseAPIResponse 
  */
 
 type IdentifiedMovie = MovieDocument;
-const moviedb = new MovieDb(process.env.TMDB_API_KEY || '');
+const tmdb = new TMDB(process.env.TMDB_API_READ_ACCESS_TOKEN || '');
 
 export const mediaScan = async (mediaFolder: string, logger: Logger): Promise<{ success: boolean }> => {
 	const identifiedMovies = await movieScan(mediaFolder, logger);
@@ -90,7 +97,6 @@ export const mediaScan = async (mediaFolder: string, logger: Logger): Promise<{ 
 		}
 	}
 
-	// Update Metadata > lastScanTime
 	const lastScanTime = new Date();
 	const metadataExists = await MetadataModel.exists({ id: 0 });
 	if (!metadataExists) {
@@ -116,12 +122,12 @@ export const movieScan = async (mediaFolder: string, logger: Logger): Promise<Id
 		const moviePath = `${movieBaseFolder}/${movieDir}`;
 
 		if (movieName && movieYear) {
-			const movieResult = await fetchMovieResult({ name: movieName, year: parseInt(movieYear) });
-			if (!movieResult || !movieResult?.id) continue;
+			const movieMetadata = await fetchMovieMetadata({ name: movieName, year: parseInt(movieYear) });
+			if (!movieMetadata || !movieMetadata.details.id) continue;
 			identifiedMovies.push({
-				id: movieResult.id,
+				id: movieMetadata.details.id,
 				path: moviePath,
-				metadata: movieResult,
+				metadata: movieMetadata,
 			});
 		}
 	}
@@ -134,23 +140,72 @@ export const showScan = async (mediaFolder: string, logger: Logger) => {
 	return [];
 };
 
-const fetchMovieResult = async ({ name, year }: { name: string; year: number }): Promise<MovieResult | undefined> => {
-	const response = await moviedb.searchMovie({ query: name, year });
-	const result = response.results![0];
-	return result;
+const fetchMovieMetadata = async ({
+	name,
+	year,
+}: {
+	name: string;
+	year: number;
+}): Promise<MovieMetadata | undefined> => {
+	try {
+		const search = await tmdb.search.movies({ query: name, year });
+		const { id } = search.results![0] || {};
+
+		if (!id) {
+			return undefined;
+		}
+
+		const details = await tmdb.movies.details(id!);
+		let credits = await tmdb.movies.credits(id!);
+		let images = await tmdb.movies.images(id!)
+
+		// Filter crew jobs
+		credits.crew = credits.crew.filter((crew) => includedCrewJobs.includes(crew.job));
+
+		// Only include english images
+		images.posters = images.posters.filter((poster) => poster.iso_639_1 === 'en');
+		images.backdrops = images.backdrops.filter((backdrop) => backdrop.iso_639_1 === 'en');
+		images.logos = images.logos.filter((logo) =>
+			logo.iso_639_1 === 'en'
+		);
+
+		return {
+			details,
+			credits,
+			images
+		};
+	} catch (error) {
+		console.error('Error fetching movie details:', error);
+	}
 };
 
-const fetchShowResult = async ({ name, year }: { name: string; year: number }): Promise<TvResult | undefined> => {
-	const response = await moviedb.searchTv({ query: name, year });
-	const result = response.results![0];
-	return result;
+const fetchShowMetadata = async ({
+	name,
+	year,
+}: {
+	name: string;
+	year: number;
+}): Promise<TvShowDetails | undefined> => {
+	try {
+		const search = await tmdb.search.tvShows({ query: name, year });
+		const { id } = search.results![0] || {};
+
+		if (!id) {
+			return undefined;
+		}
+
+		const details = await tmdb.tvShows.details(id!);
+		return details;
+	} catch (error) {
+		console.error('Error fetching show details:', error);
+	}
 };
 
 /**
  * Utility functions to find media/videos
  */
 
-export const findMediaData = async (id: number): Promise<{ error?: string; data?: MediaAPIData }> => {
+export const findMediaData = async (id: number): Promise<{ error?: string; type?: MediaType, data?: MovieAPIData }> => {
 	if (!(await ensureDbConnection())) {
 		return { error: 'Database not connected' };
 	}
@@ -166,12 +221,12 @@ export const findMediaData = async (id: number): Promise<{ error?: string; data?
 		const movie = await MovieModel.findOne({ id }).lean();
 		const transcoding = await getTranscoding(id);
 		return movie
-			? { data: { type, metadata: movie.metadata, transcodeStatus: transcoding?.status || 'not ready' } }
+			? { type, data: { metadata: { ...movie.metadata, transcodeStatus: transcoding?.status || 'not ready' } } }
 			: { error: 'Movie not found' };
 	}
 
-	// if (type === 'show') {
-	// }
+	if (type === 'show') {
+	}
 
 	return { error: 'Media not found' };
 };
@@ -201,7 +256,7 @@ export const findShows = async (): Promise<{ shows?: ShowDocument[]; error?: str
 	if (!(await ensureDbConnection())) {
 		return { error: 'Database not connected' };
 	}
-	const shows = await ShowModel.find({}).select(['id']).lean();
+	const shows = await ShowModel.find({}).lean();
 	return { shows };
 };
 
@@ -216,7 +271,7 @@ export const findTranscodeMediaInfo = async (id: number): Promise<{ path?: strin
 
 	if (type === 'movie') {
 		const movie = await MovieModel.findOne({ id }).lean();
-		return { path: movie?.path, title: movie?.metadata.title };
+		return { path: movie?.path, title: movie?.metadata.details.title };
 	}
 
 	return null;

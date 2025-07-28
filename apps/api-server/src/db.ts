@@ -35,12 +35,12 @@ export const MetadataModel = mongoose.model('Metadata', metadataSchema);
  *  Movies
  *    - id
  *    - folder path
- *    - metadata (moviedb result)
+ *    - metadata
  *
  *  Shows
  *    - id
  *    - folder path
- *    - metadata (moviedb result)
+ *    - metadata
  *
  *  Transcode
  * 	 - id
@@ -62,6 +62,7 @@ const movieSchema = new mongoose.Schema<MovieDocument>({
 const showSchema = new mongoose.Schema<ShowDocument>({
 	id: { type: Number, required: true, unique: true, primary: true },
 	path: { type: String, required: true },
+	metadata: { type: mongoose.Schema.Types.Mixed, required: true },
 });
 const transcodeSchema = new mongoose.Schema<TranscodeDocument>({
 	id: { type: Number, required: true, unique: true, primary: true },
@@ -84,12 +85,12 @@ export const TranscodeModel = mongoose.model('Transcode', transcodeSchema);
  *   - password
  */
 
-const userScheme = new mongoose.Schema<UserDocument>({
+const userSchema = new mongoose.Schema<UserDocument>({
 	username: { type: String, unique: true, required: true },
 	password: { type: String, required: true },
 });
 
-export const UserModel = mongoose.model('User', userScheme);
+export const UserModel = mongoose.model('User', userSchema);
 
 /**
  * Utility functions for database connection
@@ -107,8 +108,12 @@ export const setupDb = async () => {
 	await ShowModel.createCollection();
 	await TranscodeModel.createCollection();
 	await UserModel.createCollection();
-	// TEMP clear transcodings
-	await TranscodeModel.deleteMany({});
+
+	// TEMP clears
+	// await MovieModel.deleteMany({});
+	// await MediaModel.deleteMany({});
+	// await TranscodeModel.deleteMany({});
+
 	return mongoose.connection.readyState === 1;
 };
 

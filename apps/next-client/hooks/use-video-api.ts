@@ -16,11 +16,11 @@ export const useFetchTranscodeRequest = () => {
 			const status = await fetchTranscodeRequest(id);
 
 			if (status === 'not ready') {
-				toast.error(`Playback preparation for ${title} failed.`, { closeButton: true });
+				toast.error(`Playback preparation for ${title || String(id)} failed.`, { closeButton: true });
 				return false;
 			}
 			if (status === 'in progress') {
-				toast.success(`Playback for ${title} is being prepared.`, { closeButton: true });
+				toast.success(`Playback for ${title || String(id)} is being prepared.`, { closeButton: true });
 				return false;
 			}
 

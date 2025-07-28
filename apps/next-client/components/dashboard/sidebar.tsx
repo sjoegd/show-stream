@@ -1,14 +1,15 @@
 import { buttonVariants } from '@workspace/ui/components/button';
 import { FilmIcon, HomeIcon, SearchIcon, SettingsIcon, TvIcon } from 'lucide-react';
 import Link from 'next/link';
+import { ModeToggle } from './mode-toggle';
 
 export default function Sidebar() {
 	return (
-		<div className="border-r h-full min-w-56 flex flex-col gap-8">
-			<div className="px-4 py-4">
+		<div className="border-r h-full min-w-56 flex flex-col py-8 gap-10">
+			<div className="px-6">
 				<h1 className="text-2xl">ShowStream</h1>
 			</div>
-			<div className="flex flex-col gap-4 px-4">
+			<div className="flex flex-col gap-4 px-6">
 				<SidebarSection
 					sectionHeader="Main"
 					elements={[

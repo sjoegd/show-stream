@@ -1,5 +1,5 @@
-import { type MediaType, type TranscodeStatus } from "@workspace/types/db-types";
-import { type MovieResult } from "moviedb-promise";
+import type { TranscodeStatus } from "@workspace/types/db-types";
+import type { Credits, Images, MovieDetails, TvShowDetails } from 'tmdb-ts';
 
 export interface BaseAPIResponse {
   status: number;
@@ -9,26 +9,19 @@ export interface BaseAPIResponse {
 /**
  * Media API
  */
-export interface MoviesAPIData {
-  movies: MovieAPIData[];
+export interface MovieMetadata {
+  details: MovieDetails;
+  credits: Credits;
+  images: Images;
+  transcodeStatus?: TranscodeStatus;
 }
 export interface MovieAPIData {
-  id: number;
-  transcodeStatus: TranscodeStatus;
-  metadata: MovieResult;
+	metadata: MovieMetadata;
 }
-
-export interface ShowsAPIData {
-  shows: {
-    id: number;
-  }[];
+export interface MoviesAPIData {
+  movies: MovieMetadata[];
 }
-
-export interface MediaAPIData {
-  type: MediaType;
-  transcodeStatus: TranscodeStatus;
-  metadata: MovieResult; // Only supports movies for now
-}
+export interface ShowsAPIData {}
 
 /**
  * Video API

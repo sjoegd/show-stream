@@ -18,6 +18,6 @@ export const removeSocketNotifications = (socket: Socket) => {
 
 export const sendNotificationToClients = (notification: APINotification) => {
 	sockets.forEach((socket) => {
-		socket.emit(`notification`, { ...notification });
+		socket.emit('notification', { ...notification });
 	});
 };

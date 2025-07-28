@@ -34,6 +34,7 @@ export const login = async (values: z.infer<typeof loginSchema>) => {
 		return { error: 'Invalid username or password', success: false };
 	}
 
+	// Store token in authToken cookie
 	const cookieStore = await cookies();
 	cookieStore.set({
 		name: 'authToken',

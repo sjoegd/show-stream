@@ -9,8 +9,8 @@ export const useUser = () => {
 
 	useEffect(() => {
 		const getUser = async () => {
-			const result = await verifyUser();
-			setUser(result);
+			const user = await verifyUser();
+			setUser(user);
 		};
 		getUser();
 	}, [setUser]);

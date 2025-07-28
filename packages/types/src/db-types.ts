@@ -1,4 +1,5 @@
-import { type MovieResult } from 'moviedb-promise';
+import type { MovieDetails, TvShowDetails } from "tmdb-ts";
+import { MovieMetadata } from "./api-types";
 
 export interface MetadataDocument {
 	lastScanTime: Date;
@@ -13,12 +14,13 @@ export type MediaType = 'movie' | 'show';
 export interface MovieDocument {
 	id: number;
 	path: string;
-	metadata: MovieResult;
+	metadata: MovieMetadata;
 }
 
 export interface ShowDocument {
 	id: number;
 	path: string;
+	metadata: {};
 }
 
 export interface TranscodeDocument {
