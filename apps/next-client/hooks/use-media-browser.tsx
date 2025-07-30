@@ -99,6 +99,7 @@ export type FilterSelectionState = FilterState & {
 	clearScores: () => void;
 	clearVotes: () => void;
 	clearSelections: () => void;
+	getState: () => FilterState;
 };
 
 export type FilterSelectedState = FilterState & {
@@ -171,6 +172,7 @@ export const useFilterSelectionStore = create<FilterSelectionState>((set, get) =
 		clearScores();
 		clearVotes();
 	},
+	getState: () => get(),
 }));
 
 export const useFilterSelectedStore = create<FilterSelectedState>((set) => ({

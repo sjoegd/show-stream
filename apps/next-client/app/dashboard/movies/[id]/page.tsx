@@ -3,23 +3,33 @@
 import useSWR from 'swr';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import TranscodeStatusIcon from '@/components/media/transcode-status-icon';
-import MoreOptionsPopover from '@/components/media/more-options-popover';
-import LoadingCircle from '@/components/icons/loading-circle';
-import { Button } from '@workspace/ui/components/button';
+import { redirect, useParams } from 'next/navigation';
+import { Star } from 'lucide-react';
+import { cn } from '@workspace/ui/lib/utils';
 import { useFetchTranscodeRequest } from '@/hooks/use-video-api';
+import { useMoviesBrowserContext } from '@/hooks/use-movies-browser';
+import TranscodeStatusIcon from '@/components/media/transcode-status-icon';
+import { Button } from '@workspace/ui/components/button';
+import MoreOptionsPopover from '@/components/media/more-options-popover';
+import Backward from '@/components/dashboard/backward';
+import LoadingCircle from '@/components/icons/loading-circle';
+import { Card, CardContent, CardFooter } from '@workspace/ui/components/card';
 import type { MovieAPIData } from '@workspace/types/api-types';
 import type { TranscodeStatus } from '@workspace/types/db-types';
-import Backward from '@/components/dashboard/backward';
-import { Star } from 'lucide-react';
-import { Card, CardContent, CardFooter } from '@workspace/ui/components/card';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MoviePage() {
 	const { id } = useParams();
 	const { data, isLoading } = useSWR<MovieAPIData>(`/api/movie/${id}`, fetcher, { refreshInterval: 1000 });
+	const { filterSelectionState, filterSelectedState } = useMoviesBrowserContext();
+
+	const applyGenreFilter = (genre: string) => {
+		filterSelectionState.clearGenres();
+		filterSelectionState.setGenre(genre);
+		filterSelectedState.applyFilter(filterSelectionState.getState());
+		redirect(`/dashboard/movies`);
+	};
 
 	if (!data || isLoading) {
 		return (
@@ -34,11 +44,12 @@ export default function MoviePage() {
 
 	const poster = metadata.images.posters[0];
 	const logo = metadata.images.logos[0];
-	const cast = metadata.credits.cast.slice(0, 7);
+	const cast = metadata.credits.cast;
 
 	return (
-		<div>
+		<div className="flex flex-col max-w-full overflow-hidden">
 			<div
+				// TODO: sidebar css variable for size
 				className="fixed inset-0 -z-10 left-56 max-w-screen"
 				style={{
 					backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(${process.env.NEXT_PUBLIC_MOVIE_DB_IMAGE_BASE_URL}/original${metadata.details.backdrop_path})`,
@@ -47,8 +58,8 @@ export default function MoviePage() {
 					backgroundRepeat: 'no-repeat',
 				}}
 			/>
-			<div className="min-w-full max-h-full overflow-y-auto overflow-x-clip">
-				<div className="flex h-[40vh] w-full px-14">
+			<div className="flex flex-col w-full max-h-full overflow-y-auto overflow-x-hidden">
+				<div className="flex min-h-[40vh] w-full px-14">
 					<div className="flex relative">
 						<Backward className="mt-12" />
 						<div className="flex relative my-auto">
@@ -61,7 +72,6 @@ export default function MoviePage() {
 								loading="eager"
 							/>
 						</div>
-						{/* <div className="my-auto text-5xl text-white">{metadata.details.title}</div> */}
 					</div>
 					<div className="ml-auto mt-auto text-white py-8 px-12 flex items-center gap-2">
 						<PlayButton
@@ -85,13 +95,11 @@ export default function MoviePage() {
 					</div>
 					<div className="flex flex-col w-full col-span-9 gap-4 pr-12">
 						<h1 className="text-3xl">{metadata.details.title}</h1>
-						<div className="flex w-full gap-2">
+						<GenreContainer>
 							{metadata.details.genres.map((genre) => (
-								<p key={genre.id} className="text-sm bg-accent text-primary px-3 py-1 rounded-md">
-									{genre.name}
-								</p>
+								<GenreTag key={genre.id} genre={genre.name} onClick={() => applyGenreFilter(genre.name)} />
 							))}
-						</div>
+						</GenreContainer>
 						<div className="flex flex-col w-full border-2 rounded-md p-4 gap-4 my-3">
 							<div className="flex gap-3">
 								<p>{metadata.details.release_date?.split('-')[0]}</p>
@@ -154,13 +162,12 @@ export default function MoviePage() {
 						</div>
 					</div>
 				</div>
-				<div className="bg-background py-8 px-12">
-					<h2 className="text-2xl mb-4">Cast</h2>
-					<div className="flex w-full gap-4">
-						{cast.map((c) => (
-							<CastCard key={c.name} name={c.name} character={c.character} profilePath={c.profile_path} />
+				<div className="pr-16 bg-background">
+					<CastContainer className="flex flex-col py-8 px-12 max-w-full">
+						{cast.map((c, i) => (
+							<CastCard key={`${c.name}-${i}`} name={c.name} character={c.character} profilePath={c.profile_path} />
 						))}
-					</div>
+					</CastContainer>
 				</div>
 			</div>
 		</div>
@@ -193,9 +200,30 @@ function PlayButton({ id, title, transcodeStatus }: { id: number; title?: string
 	);
 }
 
+function GenreContainer({ children, className }: { children: React.ReactNode; className?: string }) {
+	return <div className={cn('flex w-full gap-2', className)}>{children}</div>;
+}
+
+function GenreTag({ genre, onClick }: { genre: string; onClick?: () => void }) {
+	return (
+		<Button variant="secondary" size="sm" className="text-sm text-primary px-3 py-1 rounded-md" onClick={onClick}>
+			{genre}
+		</Button>
+	);
+}
+
+function CastContainer({ children, className }: { children: React.ReactNode; className?: string }) {
+	return (
+		<div className={cn(className)}>
+			<h2 className="text-2xl mb-2">Cast</h2>
+			<div className="flex overflow-x-auto gap-4 py-2">{children}</div>
+		</div>
+	);
+}
+
 function CastCard({ name, character, profilePath }: { name: string; character: string; profilePath?: string }) {
 	return (
-		<Card className="p-0 gap-0">
+		<Card className="p-0 gap-0 flex-shrink-0 w-44">
 			<CardContent className="p-0 rounded-t-xl overflow-hidden max-h-64">
 				<div className="relative w-full h-full">
 					<Image
