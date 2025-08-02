@@ -29,3 +29,9 @@ These are heavily reliant on your setup, but you should ensure that these are bo
 `/media` should contain two folders: `/media/movies` for storing movies and `/media/shows` for storing shows.
 Both of them have strict naming conventions for their actual content. For `/movies`, every movie should have its own folder that is named "Movie Name (Year)", e.g "The Dark Knight (2008)" and its actual video file should be put in that folder with the exact same name. (shows are currently not supported yet).  
 `/data` is the folder that the MongoDB Database will use. So in order to keep the database persistent it should be mounted to the `mongodb` image in `docker-compose.yml`.
+
+### Docker
+
+Lastly, to actually run the project you need Docker.  
+The script `build-docker.sh` is provided, which automatically creates the entire docker setup.  
+To configure it you can use `docker-compose.yml`, which contains all the configs for the images used in the project.
